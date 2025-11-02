@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Performance Prediction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #B8A3C8 0%, #9B87AB 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .header-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 8px;
+            margin-bottom: 40px;
+            text-align: center;
+            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .browser-window {
+            width: 80vw;
+            max-width: 1400px;
+            background: #7CA5BB;
+            border-radius: 24px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 4px solid #4A6B7C;
+        }
+
+        .browser-header {
+            background: #7CA5BB;
+            padding: 16px 24px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .browser-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 3px solid #4A6B7C;
+        }
+
+        .btn-minimize {
+            background: transparent;
+        }
+
+        .btn-maximize {
+            background: transparent;
+        }
+
+        .btn-close {
+            background: transparent;
+            position: relative;
+        }
+
+        .btn-close::before,
+        .btn-close::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 2px;
+            background: #4A6B7C;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+
+        .btn-close::after {
+            transform: translate(-50%, -50%) rotate(-45deg);
+        }
+
+        .browser-content {
+            background: #4A6B7C;
+            border-radius: 0 0 16px 16px;
+            padding: 80px 60px;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            background: #4A6B7C;
+            border: 4px solid #7CA5BB;
+            border-radius: 20px;
+            padding: 80px 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 40px;
+        }
+
+        .upload-section:hover {
+            background: #3E5A6A;
+            transform: translateY(-2px);
+        }
+
+        .upload-section.has-image {
+            padding: 30px;
+        }
+
+        .cloud-icon {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 30px;
+        }
+
+        .cloud-icon svg {
+            width: 100%;
+            height: 100%;
+            stroke: #7CA5BB;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .upload-text {
+            color: white;
+            font-size: 2rem;
+            font-weight: 600;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 500px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .change-image-btn {
+            color: #7CA5BB;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* Caption Section */
+        .caption-section {
+            background: transparent;
+            border: 4px solid #7CA5BB;
+            border-radius: 20px;
+            padding: 35px;
+            margin-bottom: 40px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .caption-section:hover {
+            background: rgba(124, 165, 187, 0.1);
+        }
+
+        .caption-section:focus-within {
+            background: rgba(124, 165, 187, 0.15);
+            border-color: #9BBFD4;
+        }
+
+        .caption-placeholder {
+            color: white;
+            font-size: 2rem;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        textarea {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            text-align: center;
+            min-height: 100px;
+            cursor: text;
+        }
+
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Analyze Button */
+        .analyze-btn {
+            width: 100%;
+            background: #1A2742;
+            color: white;
+            border: none;
+            padding: 28px;
+            border-radius: 20px;
+            font-size: 2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 24px rgba(26, 39, 66, 0.4);
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            background: #0F1A30;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(26, 39, 66, 0.5);
+        }
+
+        .analyze-btn:disabled {
+            background: #3A4B5E;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .spinner {
+            width: 28px;
+            height: 28px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 12px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error Message */
+        .error-message {
+            background: rgba(255, 100, 100, 0.2);
+            border: 2px solid rgba(255, 100, 100, 0.5);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* Result Section */
+        .result-window {
+            width: 80vw;
+            max-width: 1400px;
+            background: #7CA5BB;
+            border-radius: 24px;
+            padding: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 4px solid #4A6B7C;
+            margin-top: 40px;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-content {
+            background: #4A6B7C;
+            border-radius: 16px;
+            padding: 80px 60px;
+            text-align: center;
+        }
+
+        .result-title {
+            color: white;
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-bottom: 40px;
+        }
+
+        .score-display {
+            font-size: 6.5rem;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 20px;
+            text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-label {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #B8D4E5;
+            margin-bottom: 50px;
+        }
+
+        .score-details {
+            background: rgba(26, 39, 66, 0.3);
+            border-radius: 20px;
+            padding: 40px;
+            border: 3px solid #7CA5BB;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 35px;
+            margin-bottom: 35px;
+        }
+
+        .detail-item {
+            text-align: center;
+        }
+
+        .detail-label {
+            color: #B8D4E5;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+        }
+
+        .detail-value {
+            color: white;
+            font-size: 2.2rem;
+            font-weight: 700;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 28px;
+            background: rgba(26, 39, 66, 0.5);
+            border-radius: 14px;
+            overflow: hidden;
+            border: 2px solid #7CA5BB;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #1A2742 0%, #4A6B7C 100%);
+            transition: width 1.2s ease;
+            border-radius: 14px;
+        }
+
+        @media (max-width: 768px) {
+            .header-title {
+                font-size: 1.8rem;
+                letter-spacing: 3px;
+            }
+
+            .browser-content {
+                padding: 30px 20px;
+            }
+
+            .upload-section {
+                padding: 40px 20px;
+            }
+
+            .cloud-icon {
+                width: 80px;
+                height: 80px;
+            }
+
+            .upload-text,
+            .caption-placeholder {
+                font-size: 1.2rem;
+            }
+
+            .analyze-btn {
+                font-size: 1.2rem;
+                padding: 16px;
+            }
+
+            .score-display {
+                font-size: 3.5rem;
+            }
+
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+    </style>
+</head>
+<body>
+
+    <h1 class="header-title">POST PERFORMANCE PREDICTION</h1>
+
+    <!-- Main Browser Window -->
+    <div class="browser-window">
+        <div class="browser-header">
+            <div class="browser-btn btn-minimize"></div>
+            <div class="browser-btn btn-maximize"></div>
+            <div class="browser-btn btn-close"></div>
+        </div>
+
+        <div class="browser-content">
+            <!-- Upload Section -->
+            <div class="upload-section" id="uploadSection">
+                <div id="uploadPrompt">
+                    <div class="cloud-icon">
+                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M20 16.5C21.3807 16.5 22.5 15.3807 22.5 14C22.5 12.6193 21.3807 11.5 20 11.5C19.9722 11.5 19.9445 11.5002 19.9168 11.5007C19.972 11.1721 20 10.8381 20 10.5C20 7.46243 17.5376 5 14.5 5C12.2534 5 10.3213 6.31163 9.44898 8.19691C9.13426 8.06653 8.79329 8 8.43831 8C6.53299 8 5 9.53299 5 11.4383C5 11.5835 5.01262 11.7255 5.03676 11.8637C3.33628 12.3465 2 13.9045 2 15.75C2 17.9591 3.79086 19.75 6 19.75H20C21.3807 19.75 22.5 18.6307 22.5 17.25C22.5 15.8693 21.3807 14.75 20 14.75Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 12V19M12 12L9 15M12 12L15 15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <div class="upload-text">Upload Your Image</div>
+                </div>
+                <div id="imagePreview" class="hidden">
+                    <img id="previewImg" class="preview-image" alt="Preview">
+                    <div>
+                        <a href="#" class="change-image-btn" id="changeBtn">Change Image</a>
+                    </div>
+                </div>
+            </div>
+            <input type="file" id="fileInput" accept="image/*">
+
+            <!-- Caption Section -->
+            <div class="caption-section" id="captionSection">
+                <div class="caption-placeholder" id="captionPlaceholder">Add a Caption!</div>
+                <textarea id="captionInput" class="hidden" rows="3" placeholder="Enter your caption here..."></textarea>
+            </div>
+
+            <!-- Error Message -->
+            <div class="error-message hidden" id="errorMessage"></div>
+
+            <!-- Analyze Button -->
+            <button class="analyze-btn" id="analyzeBtn" disabled>
+                Analyse post
+            </button>
+        </div>
+    </div>
+
+    <!-- Result Window -->
+    <div class="result-window hidden" id="resultWindow">
+        <div class="browser-header">
+            <div class="browser-btn btn-minimize"></div>
+            <div class="browser-btn btn-maximize"></div>
+            <div class="browser-btn btn-close"></div>
+        </div>
+
+        <div class="result-content">
+            <div class="result-title">Performance Score</div>
+            <div class="score-display" id="scoreDisplay">0.0</div>
+            <div class="score-label" id="scoreLabel">Excellent</div>
+
+            <div class="score-details">
+                <div class="detail-grid">
+                    <div class="detail-item">
+                        <div class="detail-label">Normalized</div>
+                        <div class="detail-value" id="normalizedScore">0.0000</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">Percentage</div>
+                        <div class="detail-value" id="percentageScore">0.00%</div>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_ENDPOINT = '/predict';
+
+        const uploadSection = document.getElementById('uploadSection');
+        const uploadPrompt = document.getElementById('uploadPrompt');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+        const fileInput = document.getElementById('fileInput');
+        const changeBtn = document.getElementById('changeBtn');
+
+        const captionSection = document.getElementById('captionSection');
+        const captionPlaceholder = document.getElementById('captionPlaceholder');
+        const captionInput = document.getElementById('captionInput');
+
+        const errorMessage = document.getElementById('errorMessage');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        const resultWindow = document.getElementById('resultWindow');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const scoreLabel = document.getElementById('scoreLabel');
+        const normalizedScore = document.getElementById('normalizedScore');
+        const percentageScore = document.getElementById('percentageScore');
+        const progressBar = document.getElementById('progressBar');
+
+        let selectedFile = null;
+
+        // Upload section click
+        uploadSection.addEventListener('click', (e) => {
+            if (e.target.id === 'changeBtn' || e.target.closest('#changeBtn')) {
+                e.preventDefault();
+                resetImage();
+            } else if (!imagePreview.classList.contains('hidden')) {
+                return;
+            } else {
+                fileInput.click();
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            handleFile(e.target.files[0]);
+        });
+
+        // Caption section click
+        captionSection.addEventListener('click', () => {
+            if (captionInput.classList.contains('hidden')) {
+                captionPlaceholder.classList.add('hidden');
+                captionInput.classList.remove('hidden');
+                captionInput.focus();
+            }
+        });
+
+        // Caption input
+        captionInput.addEventListener('input', checkFormValidity);
+        captionInput.addEventListener('blur', () => {
+            if (!captionInput.value.trim()) {
+                captionInput.classList.add('hidden');
+                captionPlaceholder.classList.remove('hidden');
+            }
+        });
+
+        // Handle file
+        function handleFile(file) {
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showError('Please select a valid image file');
+                return;
+            }
+
+            selectedFile = file;
+            hideError();
+            hideResult();
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                uploadPrompt.classList.add('hidden');
+                imagePreview.classList.remove('hidden');
+                uploadSection.classList.add('has-image');
+                checkFormValidity();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Reset image
+        function resetImage() {
+            selectedFile = null;
+            previewImg.src = '';
+            uploadPrompt.classList.remove('hidden');
+            imagePreview.classList.add('hidden');
+            uploadSection.classList.remove('has-image');
+            fileInput.value = '';
+            checkFormValidity();
+        }
+
+        // Check form validity
+        function checkFormValidity() {
+            const isValid = selectedFile && captionInput.value.trim().length > 0;
+            analyzeBtn.disabled = !isValid;
+        }
+
+        // Show/hide error
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
+
+        function hideError() {
+            errorMessage.classList.add('hidden');
+        }
+
+        // Hide result
+        function hideResult() {
+            resultWindow.classList.add('hidden');
+        }
+
+        // Show/hide loading
+        function showLoading() {
+            analyzeBtn.disabled = true;
+            analyzeBtn.innerHTML = '<span class="spinner"></span>Analysing...';
+        }
+
+        function hideLoading() {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = 'Analyse post';
+        }
+
+        // Get score category
+        function getScoreCategory(score) {
+            if (score >= 80) return 'Excellent';
+            if (score >= 60) return 'Good';
+            if (score >= 40) return 'Average';
+            return 'Needs Improvement';
+        }
+
+        // Display result
+        function displayResult(data) {
+            const category = getScoreCategory(data.score_percentage);
+
+            scoreDisplay.textContent = data.score_percentage.toFixed(1);
+            scoreLabel.textContent = category;
+            normalizedScore.textContent = data.score_normalized.toFixed(4);
+            percentageScore.textContent = data.score_percentage.toFixed(2) + '%';
+
+            setTimeout(() => {
+                progressBar.style.width = data.score_percentage + '%';
+            }, 100);
+
+            resultWindow.classList.remove('hidden');
+            resultWindow.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Analyze button click
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile || !captionInput.value.trim()) return;
+
+            hideError();
+            hideResult();
+            showLoading();
+
+            try {
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+                formData.append('caption', captionInput.value.trim());
+
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    displayResult(data);
+                } else {
+                    showError(data.error || 'Failed to get score');
+                }
+            } catch (error) {
+                showError('Failed to connect to the server. Make sure the API is running on port 5000.');
+                console.error('Error:', error);
+            } finally {
+                hideLoading();
+            }
+        });
+
+        // Handle Enter key submission
+        captionInput.addEventListener('keydown', (e) => {
+            // Check if 'Enter' was pressed *without* the 'Shift' key
+            if (e.key === 'Enter' && !e.shiftKey) {
+                // Prevent the default action (adding a new line)
+                e.preventDefault();
+                
+                // Trigger the analyze button's click event if it's not disabled
+                if (!analyzeBtn.disabled) {
+                    analyzeBtn.click();
+                }
+            }
+            // If Shift + Enter is pressed, the 'if' condition is false, 
+            // and it will just add a new line as expected.
+        });
+
+        // Initialize
+        checkFormValidity();
+    </script>
+</body>
+</html>
